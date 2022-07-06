@@ -90,6 +90,6 @@ def __main__():
     fb.creatMymodel(path)
     fb.test('FindBeauty/testimg/')
 
-
+#hellow
 if __name__ == '__main__':
     __main__()
