@@ -85,7 +85,7 @@ class FindBeauty():
 
 
 def __main__():
-    path = 'FindBeauty/model-test4'
+    path = 'FindBeauty/models/model-test4'
     fb = FindBeauty()
     fb.creatMymodel(path)
     fb.test('FindBeauty/testimg/')
