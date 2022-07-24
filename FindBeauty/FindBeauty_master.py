@@ -1,4 +1,4 @@
-from pyexpat import model
+from math import sqrt
 from PIL import Image
 import matplotlib.pyplot as plt
 import os
@@ -14,6 +14,19 @@ batch_size = 16
 class FindBeauty():
     def __init__(self):
         self.hm = HandleImg()
+        self.k_1 = 16
+        self.k_2 = 32
+
+        def get_size(k=0, size=[5, 5]):
+            if k**0.5 > 5:
+                size[0] = 5
+                size[1] = (k//5)+1
+            else:
+                size[0] = int(k**0.5//1)+1
+                size[1] = size[0]
+            return size
+        self.size_1 = get_size(k=self.k_1)
+        self.size_2 = get_size(k=self.k_2)
 
     def creatMymodel(self, path):
         if os.path.exists(path):
@@ -21,9 +34,9 @@ class FindBeauty():
         else:
             self.model = models.Sequential()
             self.model.add(layers.Conv2D(
-                8, (3, 3), activation='relu', input_shape=(64, 64, 3)))
+                self.k_1, (3, 3), activation='relu', input_shape=(64, 64, 3)))
             self.model.add(layers.Conv2D(
-                16, (3, 3), activation='relu'))
+                self.k_2, (3, 3), activation='relu'))
             self.model.add(layers.Flatten())
             self.model.add(layers.Dense(512, activation='relu'))
             self.model.add(layers.Dense(1, activation='sigmoid'))
@@ -32,25 +45,26 @@ class FindBeauty():
     # FindBeauty/img1/
     # FindBeauty/img2/
     # And use the number starting with 1 as the file name of the picture
-    def load_data(self, img_type: str):
+    def load_data(self, img_type='.jpg'):
         images = []
-        for i in range(1, 401):
-            img1 = cv2.imread('FindBeauty/img1/'+str(i)+img_type)
-            img2 = cv2.imread('FindBeauty/img2/'+str(i)+img_type)
+        num=550
+        for i in range(1, num):
+            img1 = cv2.imread('FindBeauty/img_er/'+str(i)+img_type)
+            img2 = cv2.imread('FindBeauty/img_vive/'+str(i)+img_type)
             img1 = cv2.resize(img1, dsize=(64, 64))
             img2 = cv2.resize(img2, dsize=(64, 64))
             images.append(img1)
             images.append(img2)
         images = np.array(images)
         labels = []
-        for i in range(1, 401):
+        for i in range(1, num):
             labels.append([0])
             labels.append([1])
         labels = np.array(labels)
         return images, labels
 
     def visualization(self, img_path: str):
-        def flip_horizontally(arr:np):
+        def flip_horizontally(arr: np):
             print(arr.shape)
             arr2 = arr.copy()
             arr2 = arr.reshape(int(arr.size/3), 3)
@@ -81,31 +95,31 @@ class FindBeauty():
 
         def show_one_out(one_out):
             imgs = np.array(one_out)
-            imgs = imgs.reshape(62, 62, 8)
+            imgs = imgs.reshape(62, 62, self.k_1)
             imgs = imgs.T
             # fig=plt.figure(figsize=(3,3))
-            fig=plt.figure()
-            fig.add_subplot(3,3,1)
+            fig = plt.figure()
+            fig.add_subplot(self.size_1[0], self.size_1[1], 1)
             plt.imshow(Image.open(img_path))
             plt.xticks([]), plt.yticks([])
-            for i in range(2, 10):
-                fig.add_subplot(3, 3, i)
+            for i in range(2, self.k_1+2):
+                fig.add_subplot(self.size_1[0], self.size_1[1], i)
                 plt.imshow(np.rot90(imgs[i-2], -1))
                 plt.xticks([]), plt.yticks([])
-            
+
         def show_two_out(two_out):
             img = np.array(two_out)
-            img = img.reshape(60, 60, 16)
+            img = img.reshape(60, 60, self.k_2)
             img = img.T
-            fig=plt.figure()
-            fig.add_subplot(5, 4, 17)
+            fig = plt.figure()
+            fig.add_subplot(self.size_2[0], self.size_2[1], self.k_2+1)
             plt.imshow(Image.open(img_path))
             plt.xticks([]), plt.yticks([])
-            for i in range(1, 17):
-                fig.add_subplot(5, 4, i)
+            for i in range(1, self.k_2+1):
+                fig.add_subplot(self.size_2[0], self.size_2[1], i)
                 plt.imshow(np.rot90(img[i-1], -1))
                 plt.xticks([]), plt.yticks([])
-            
+
             # plt.imshow(self.looking())
         layer_list = ['conv2d', 'conv2d_1', 'flatten', 'dense', 'dense_1']
         for root, dirs, files in os.walk(img_path):
@@ -113,11 +127,7 @@ class FindBeauty():
                 img_path = root+path
                 one_out = one_outputs(img_path=img_path)
                 two_out = two_outputs(one_out)
-                # t_one = threading.Thread(target=show_one_out,args=(one_out,))
-                # t_two = threading.Thread(target=show_two_out,args=(two_out,))
-                # t_one.start()
-                # t_two.start()
-                
+
                 show_one_out(one_out)
                 show_two_out(two_out)
         plt.show()
@@ -146,7 +156,7 @@ class FindBeauty():
                            metrics=['accuracy'])
         # self.model.fit(self.hm.__call__(path='FindBeauty/img'),epochs=16)
         x_train, y_train = self.load_data()
-        self.model.fit(x_train, y_train, batch_size=16, epochs=4)
+        self.model.fit(x_train, y_train, batch_size=8, epochs=3)
         self.model.save(model_path)
 
     def predict_result(self, img_path):
@@ -161,11 +171,15 @@ class FindBeauty():
 
 def __main__():
 
-    path = 'FindBeauty/models/model-test4'
+    path = 'FindBeauty/models/model-test5'
     fb = FindBeauty()
     fb.creatMymodel(path)
     fb.model.summary()
-    fb.visualization('FindBeauty/testimg/')
+    a=0
+    if a:
+        fb.fit(path)
+    fb.visualization('FindBeauty/testdata/')
+    # fb.test('FindBeauty/testdata/')
 
 
 # hellow
